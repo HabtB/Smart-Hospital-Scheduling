@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Populate Test Data</title>
+</head>
+<body>
+    <h1>Populate Firebase Test Data</h1>
+    <button id="populateBtn">Populate Test Data</button>
+    <div id="status"></div>
+    
+    <script type="module">
+        import { populateTestData } from './src/scripts/populateTestData.ts';
+        
+        document.getElementById('populateBtn').addEventListener('click', async () => {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Populating data...';
+            
+            try {
+                await populateTestData();
+                statusDiv.textContent = 'Data populated successfully!';
+            } catch (error) {
+                statusDiv.textContent = 'Error: ' + error.message;
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

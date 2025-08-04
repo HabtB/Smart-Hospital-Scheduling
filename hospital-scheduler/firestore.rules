@@ -1,0 +1,50 @@
+// Firestore Security Rules for Hospital Scheduling App
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Staff collection - users can read/write their own profile
+    match /staff/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admin users can read all staff
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in ['admin', 'manager'];
+    }
+    
+    // Shifts collection - authenticated users can read, staff can create/update their shifts
+    match /shifts/{shiftId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && 
+        (request.auth.uid == resource.data.staffId || 
+         exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in ['admin', 'manager']);
+      allow delete: if request.auth != null && 
+        exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in ['admin', 'manager'];
+    }
+    
+    // Requests collection - authenticated users can read/create, managers can approve
+    match /requests/{requestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && 
+        (request.auth.uid == resource.data.staffId || 
+         exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in ['admin', 'manager']);
+    }
+    
+    // Activity feed - read only for authenticated users
+    match /activities/{activityId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+    }
+    
+    // Departments - read only for authenticated users
+    match /departments/{departmentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/staff/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in ['admin', 'manager'];
+    }
+  }
+}
