@@ -156,8 +156,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('🔑 Login successful, mustChangePassword:', user.mustChangePassword);
       
-      // Use provided role or user's default role
-      const userWithRole = { ...user, role: role || user.role };
+      // Use the user's actual role from the database, not the form role
+      const userWithRole = { ...user, role: user.role };
       const profile = createUserProfile(userWithRole);
 
       setCurrentUser(userWithRole);

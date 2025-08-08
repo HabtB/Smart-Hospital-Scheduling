@@ -3,6 +3,7 @@ import { useStaff } from '../hooks/useRealtimeData';
 import { staffService } from '../services/firebaseService';
 import type { StaffData, UserRole } from '../types';
 import { useAuth } from '../context/MockAuthContext';
+import { useNotificationService, NotificationService } from '../services/notificationService';
 import { 
   FaUsers, 
   FaUserPlus, 
@@ -23,12 +24,14 @@ import {
   FaExclamationCircle,
   FaIdBadge,
   FaChartBar,
-  FaPlus
+  FaPlus,
+  FaBell
 } from 'react-icons/fa';
 
 const StaffManagement: React.FC = () => {
   const { staff, loading, error } = useStaff();
   const { createUser, userProfile } = useAuth();
+  const notificationService = useNotificationService();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showUserForm, setShowUserForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +40,8 @@ const StaffManagement: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [tempPassword, setTempPassword] = useState<string>('');
+  const [userCreateSuccess, setUserCreateSuccess] = useState<boolean>(false);
+  const [createdUserInfo, setCreatedUserInfo] = useState<{name: string, email: string, role: string} | null>(null);
   const [userCreateLoading, setUserCreateLoading] = useState(false);
   const [userCreateError, setUserCreateError] = useState<string>('');
   
@@ -87,6 +92,14 @@ const StaffManagement: React.FC = () => {
     
     try {
       await staffService.createStaff(formData);
+      
+      // Trigger real-time notification for staff member addition
+      NotificationService.onStaffMemberAdded(
+        formData.name,
+        formData.departmentId,
+        userProfile?.name || 'Admin'
+      );
+      
       setShowCreateForm(false);
       setFormData({
         name: '',
@@ -127,12 +140,12 @@ const StaffManagement: React.FC = () => {
     }));
   };
 
-  // Admin-only user creation with temporary password
-  const handleCreateUser = async (e: React.FormEvent) => {
+  // Unified employee onboarding - creates both user account and staff record
+  const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (userProfile?.role !== 'admin') {
-      setUserCreateError('Only administrators can create users');
+      setUserCreateError('Only administrators can create employees');
       return;
     }
 
@@ -141,6 +154,7 @@ const StaffManagement: React.FC = () => {
     setTempPassword('');
     
     try {
+      // Step 1: Create user account (login credentials)
       const temporaryPassword = await createUser(
         userFormData.email,
         userFormData.role,
@@ -148,7 +162,26 @@ const StaffManagement: React.FC = () => {
         userFormData.departmentId
       );
       
+      // Step 2: Create staff record (HR/scheduling data)
+      const staffData: StaffData = {
+        name: userFormData.name,
+        email: userFormData.email,
+        role: userFormData.role,
+        departmentId: userFormData.departmentId,
+        certifications: [],
+        isActive: true
+      };
+      
+      await staffService.createStaff(staffData);
+      
+      // Step 3: Show unified success state
       setTempPassword(temporaryPassword);
+      setUserCreateSuccess(true);
+      setCreatedUserInfo({
+        name: userFormData.name,
+        email: userFormData.email,
+        role: userFormData.role
+      });
       
       // Reset form
       setUserFormData({
@@ -159,7 +192,7 @@ const StaffManagement: React.FC = () => {
       });
       
     } catch (error: any) {
-      setUserCreateError(error.message || 'Failed to create user');
+      setUserCreateError(error.message || 'Failed to create employee');
     } finally {
       setUserCreateLoading(false);
     }
@@ -285,16 +318,34 @@ const StaffManagement: React.FC = () => {
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center shadow-lg transform hover:scale-105"
             >
               <FaUserPlus className="mr-2" />
-              Add Staff Member
+              <div className="text-left">
+                <div className="font-semibold">Add Staff Member</div>
+                <div className="text-xs opacity-90">HR record only • No system access</div>
+              </div>
             </button>
             {userProfile?.role === 'admin' && (
-              <button
-                onClick={() => setShowUserForm(true)}
-                className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center shadow-lg transform hover:scale-105"
-              >
-                <FaPlus className="mr-2" />
-                Create User
-              </button>
+              <>
+                <button
+                  onClick={() => setShowUserForm(true)}
+                  className="bg-gradient-to-r from-green-600 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center shadow-lg transform hover:scale-105"
+                >
+                  <FaPlus className="mr-2" />
+                  <div className="text-left">
+                    <div className="font-semibold">Create Employee Account</div>
+                    <div className="text-xs opacity-90">HR record + Login access</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => NotificationService.triggerDemoNotifications()}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-3 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-200 flex items-center shadow-lg transform hover:scale-105"
+                >
+                  <FaBell className="mr-2" />
+                  <div className="text-left">
+                    <div className="font-semibold text-sm">Test Notifications</div>
+                    <div className="text-xs opacity-90">Demo real-time alerts</div>
+                  </div>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -646,7 +697,7 @@ const StaffManagement: React.FC = () => {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Create New User</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Create New Employee</h2>
                 <button
                   onClick={() => {
                     setShowUserForm(false);
@@ -659,7 +710,7 @@ const StaffManagement: React.FC = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateUser} className="space-y-4">
+              <form onSubmit={handleCreateEmployee} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Full Name
@@ -735,18 +786,22 @@ const StaffManagement: React.FC = () => {
                   </div>
                 )}
 
-                {tempPassword && (
+                {userCreateSuccess && createdUserInfo && (
                   <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
                     <div className="flex items-center">
                       <FaCheck className="mr-2" />
                       <div>
-                        <p className="font-medium">User created successfully!</p>
+                        <p className="font-medium">Employee created successfully!</p>
                         <p className="text-sm mt-1">
                           <strong>Temporary Password:</strong> 
                           <span className="font-mono bg-gray-200 px-2 py-1 rounded ml-2">{tempPassword}</span>
                         </p>
+                        <p className="text-sm mt-1">
+                          <strong>Employee Information:</strong> 
+                          <span className="font-mono bg-gray-200 px-2 py-1 rounded ml-2">{createdUserInfo.name} ({createdUserInfo.email}) - {createdUserInfo.role}</span>
+                        </p>
                         <p className="text-xs mt-2 text-green-600">
-                          Please share this temporary password with the user. They will be required to change it on first login.
+                          Please share this temporary password with the employee. They will be required to change it on first login.
                         </p>
                       </div>
                     </div>
@@ -779,7 +834,7 @@ const StaffManagement: React.FC = () => {
                         Creating...
                       </>
                     ) : (
-                      'Create User'
+                      'Create Employee'
                     )}
                   </button>
                 </div>

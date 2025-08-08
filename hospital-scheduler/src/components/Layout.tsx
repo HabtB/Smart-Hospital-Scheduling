@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/MockAuthContext';
+import NotificationPanel from './NotificationPanel';
 import { 
   FaHome, 
   FaUsers, 
@@ -143,16 +144,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <p className="text-xs text-blue-100">Scheduler Pro</p>
               </div>
             </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-white hover:text-blue-200 p-2 rounded-lg hover:bg-white/10 transition-all"
-            >
-              <FaTimes className="text-xl" />
-            </button>
+            <div className="flex items-center space-x-3">
+              <NotificationPanel />
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden text-white hover:text-blue-200 p-2 rounded-lg hover:bg-white/10 transition-all"
+              >
+                <FaTimes className="text-xl" />
+              </button>
+            </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-6 py-8 space-y-3 overflow-y-auto">
+          <nav className="flex-1 px-6 py-8 space-y-2 overflow-y-auto">
+            {/* Add role-specific section header */}
+            <div className="mb-6">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                {userProfile?.role === 'admin' || userProfile?.role === 'supervisor' 
+                  ? 'Management' 
+                  : 'Personal Dashboard'
+                }
+              </h3>
+            </div>
+            
             {filteredNavigation.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);

@@ -1,11 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/MockAuthContext'; 
+import { NotificationProvider } from './context/NotificationContext';
+import ToastManager from './components/ToastManager';
 import { PrivateRoute } from './components/PrivateRoute';
 import Layout from './components/Layout';
 import RoleBasedLogin from './components/RoleBasedLogin';
 import PasswordChange from './components/PasswordChange';
-import DashboardWithMockData from './components/DashboardWithMockData';
+import RoleBasedDashboard from './components/RoleBasedDashboard';
 import StaffManagement from './pages/StaffManagement';
 import { ShiftScheduling } from './components/ShiftScheduling';
 import { RequestsManagement } from './components/RequestsManagement';
@@ -54,7 +56,7 @@ const AppContent: React.FC = () => {
         <Route path="/" element={
           <PrivateRoute>
             <Layout>
-              {ENV_CONFIG.USE_MOCK_DATA ? <DashboardWithMockData /> : <DashboardWithMockData />}
+              {ENV_CONFIG.USE_MOCK_DATA ? <RoleBasedDashboard /> : <RoleBasedDashboard />}
             </Layout>
           </PrivateRoute>
         } />
@@ -108,7 +110,11 @@ const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <NotificationProvider>
+          <ToastManager>
+            <AppContent />
+          </ToastManager>
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );

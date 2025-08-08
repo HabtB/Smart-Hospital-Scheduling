@@ -164,6 +164,24 @@ export interface Request {
   reviewNotes?: string;
 }
 
+// Notification Types
+export interface Notification {
+  id: string;
+  type: 'shift_change' | 'request_approved' | 'request_rejected' | 'new_request' | 'coverage_needed' | 'schedule_update' | 'system_alert';
+  title: string;
+  message: string;
+  timestamp: Date;
+  isRead: boolean;
+  userId: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  actionUrl?: string;
+  metadata?: {
+    shiftId?: string;
+    requestId?: string;
+    departmentId?: string;
+  };
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;
